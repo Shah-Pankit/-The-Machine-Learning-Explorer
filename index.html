@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Interactive Machine Learning Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F4F8;
+            /* Light blue-gray */
+            color: #334155;
+            /* Slate-800 */
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        .nav-button {
+            transition: all 0.3s ease;
+        }
+
+        .nav-button.active {
+            background-color: #3B82F6;
+            /* Blue-500 */
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .algo-card.active {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: scale(1.05);
+            border-color: #3B82F6;
+        }
+
+        .algo-card {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+
+        .tab-button.active {
+            border-bottom-color: #3B82F6;
+            /* Blue-500 */
+            color: #3B82F6;
+            font-weight: 600;
+        }
+
+        .content-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <div id="app" class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-800 mb-2">The Machine Learning Explorer</h1>
+            <p class="text-lg text-slate-600 max-w-3xl mx-auto">An interactive guide to the core algorithms and concepts
+                of machine learning. Click on a card to learn more.</p>
+        </header>
+
+        <nav id="main-nav" class="flex flex-wrap justify-center gap-2 md:gap-4 mb-8">
+        </nav>
+
+        <section id="category-details-section" class="mb-10 p-4 bg-white rounded-xl shadow-md"
+            style="min-height: 200px; display: none;">
+            <h2 id="category-name" class="text-3xl font-bold text-slate-800 mb-4"></h2>
+            <div id="category-description" class="text-slate-600 leading-relaxed mb-6"></div>
+            <h3 class="text-xl font-semibold mb-2 text-slate-700">Key Differences:</h3>
+            <ul id="category-differences" class="list-disc list-inside text-slate-600 leading-relaxed mb-6"></ul>
+            <button id="show-algorithms-btn"
+                class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow hover:bg-blue-600 transition-colors">Explore
+                Algorithms</button>
+        </section>
+
+        <section id="algorithm-cards" class="mb-10 p-4 bg-white rounded-xl shadow-md" style="min-height: 200px;">
+        </section>
+
+        <main id="content-area" class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg content-fade-in">
+                <div id="algo-header" class="mb-6 border-b pb-4">
+                    <h2 id="algo-name" class="text-3xl font-bold text-slate-800"></h2>
+                    <p id="algo-meta" class="text-md text-slate-500"></p>
+                </div>
+
+                <div id="algo-principle" class="mb-6">
+                    <h3 class="text-xl font-semibold mb-2 text-slate-700">Core Principle</h3>
+                    <p id="principle-text" class="text-slate-600 leading-relaxed"></p>
+                </div>
+
+                <div id="algo-analogy" class="mb-6">
+                    <h3 class="text-xl font-semibold mb-2 text-slate-700">Analogy</h3>
+                    <p id="analogy-text" class="text-slate-600 leading-relaxed"></p>
+                </div>
+
+                <div id="algo-details">
+                    <div class="border-b mb-4">
+                        <nav id="tabs" class="flex -mb-px space-x-6">
+                        </nav>
+                    </div>
+                    <div id="tab-content" class="p-2">
+                    </div>
+                </div>
+            </div>
+
+            <aside class="lg:col-span-2 space-y-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg content-fade-in">
+                    <h3 class="text-xl font-semibold mb-4 text-center text-slate-700">Conceptual Diagram</h3>
+                    <div id="conceptual-diagram"
+                        class="min-h-[250px] flex items-center justify-center p-4 bg-slate-50 rounded-lg">
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg content-fade-in">
+                    <h3 class="text-xl font-semibold mb-4 text-center text-slate-700">Model Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        const algorithmData = {
+            'linear-regression': {
+                name: 'Linear Regression',
+                category: 'Supervised',
+                subCategory: 'Regression',
+                meta: 'Predicting a continuous value',
+                principle: 'Finds the best-fit straight line (or hyperplane) to model the relationship between a dependent variable and one or more independent variables.',
+                analogy: 'Drawing a trend line on a scatter plot to predict a value for a new point.',
+                comparison: { performance: 3, scalability: 7, interpretability: 9 },
+                useWhen: 'You need to predict a continuous value (e.g., house price, temperature) and the relationship is assumed to be linear.',
+                limitations: 'Assumes a linear relationship, sensitive to outliers, and cannot model complex non-linear patterns.',
+                diagram: { type: 'simple', steps: ['Input Features', 'Find Best Fit Line', 'Predict Value'] }
+            },
+            'polynomial-regression': {
+                name: 'Polynomial Regression',
+                category: 'Supervised',
+                subCategory: 'Regression',
+                meta: 'Non-linear Regression',
+                principle: 'Models non-linear relationships by fitting a polynomial equation to the data, allowing for curves to better fit the data points.',
+                analogy: 'Instead of drawing a straight trend line, you draw a curved line to connect the dots more accurately, especially when the data doesn\'t follow a straight path.',
+                comparison: { performance: 4, scalability: 5, interpretability: 7 },
+                useWhen: 'The relationship between variables is clearly non-linear, and you need a flexible model to capture that curvature.',
+                limitations: 'Prone to overfitting if the polynomial degree is too high, and can become computationally expensive.',
+                diagram: { type: 'polynomial-regression' }
+            },
+            'svr': {
+                name: 'Support Vector Regression (SVR)',
+                category: 'Supervised',
+                subCategory: 'Regression',
+                meta: 'Regression with a Margin',
+                principle: 'A variant of SVM that finds a hyperplane with a maximum margin around it, within which data points are considered correctly predicted. It is less sensitive to outliers.',
+                analogy: 'Drawing a fat pipe around the data. As long as the data points fall inside the pipe, they are considered to be correct, ignoring a small number of outliers outside.',
+                comparison: { performance: 6, scalability: 4, interpretability: 6 },
+                useWhen: 'You need a robust regression model that is less affected by outliers, and the data has a clear non-linear pattern.',
+                limitations: 'Can be computationally intensive for large datasets and requires careful tuning of hyperparameters.',
+                diagram: { type: 'svr' }
+            },
+            'decision-tree-regression': {
+                name: 'Decision Tree Regression',
+                category: 'Supervised',
+                subCategory: 'Regression',
+                meta: 'Regression with a Tree',
+                principle: 'Builds a tree-like structure to predict numerical values by partitioning the feature space into regions and assigning a constant value (usually the mean) to each region.',
+                analogy: 'A flowchart that leads to a number instead of a yes/no answer. You follow the path of questions until you reach a final value.',
+                comparison: { performance: 5, scalability: 5, interpretability: 8 },
+                useWhen: 'You need an interpretable regression model and don\'t want to assume a linear relationship. Good for feature selection.',
+                limitations: 'Prone to overfitting and can be unstable, as small changes in the data can lead to a very different tree.',
+                diagram: { type: 'decision-tree' }
+            },
+            'random-forest-regression': {
+                name: 'Random Forest Regression',
+                category: 'Supervised',
+                subCategory: 'Regression',
+                meta: 'Ensemble Regression',
+                principle: 'An ensemble method that builds multiple decision trees on different subsets of the data and averages their predictions to reduce overfitting and improve accuracy.',
+                analogy: 'A team of experts, each with a different decision tree, giving their best number. The final prediction is the average of all their answers.',
+                comparison: { performance: 8, scalability: 6, interpretability: 5 },
+                useWhen: 'You need a powerful and robust regression model that is less prone to overfitting than a single decision tree.',
+                limitations: 'Less interpretable than a single decision tree and can be computationally expensive to train.',
+                diagram: { type: 'random-forest' }
+            },
+            'gradient-boosting-regression': {
+                name: 'Gradient Boosting Regression',
+                category: 'Supervised',
+                subCategory: 'Regression',
+                meta: 'Sequential Ensemble Learning',
+                principle: 'Builds an ensemble of weak prediction models (like decision trees) sequentially. Each new model corrects the errors of the previous ones, improving overall performance.',
+                analogy: 'A team of students learning. The first student learns the basics, and the next student focuses on correcting the mistakes of the first, and so on.',
+                comparison: { performance: 9, scalability: 7, interpretability: 4 },
+                useWhen: 'You need the highest possible prediction accuracy, and you can afford the training time and computational resources.',
+                limitations: 'Highly prone to overfitting if not tuned carefully, and can be computationally expensive and time-consuming to train.',
+                diagram: { type: 'gradient-boosting' }
+            },
+            'logistic-regression': {
+                name: 'Logistic Regression',
+                category: 'Supervised',
+                subCategory: 'Classification',
+                meta: 'Binary Classification',
+                principle: 'Uses a logistic (sigmoid) function to output a probability of a given input belonging to a certain class. This probability is then used to classify the input.',
+                analogy: 'Using a sliding scale to determine if something is "more likely than not" to be in a certain group.',
+                comparison: { performance: 4, scalability: 7, interpretability: 8 },
+                useWhen: 'You need to perform a simple binary classification task (e.g., spam or not spam, yes or no) and require a probabilistic output.',
+                limitations: 'Assumes linear decision boundary between classes, not effective for complex relationships.',
+                diagram: { type: 'simple', steps: ['Input Features', 'Sigmoid Function', 'Class Probability'] }
+            },
+            'svm': {
+                name: 'Support Vector Machines (SVM)',
+                category: 'Supervised',
+                subCategory: 'Classification',
+                meta: 'Linear and Non-linear Classification',
+                principle: 'Finds the optimal hyperplane that best separates data points into two classes in a high-dimensional space, maximizing the margin between the classes.',
+                analogy: 'Drawing a line in the sand that is as far as possible from the two opposing armies, making it the clearest possible division.',
+                comparison: { performance: 7, scalability: 4, interpretability: 6 },
+                useWhen: 'You have a high-dimensional dataset and need a powerful, memory-efficient model for classification.',
+                limitations: 'Can be slow to train on large datasets and is sensitive to the choice of kernel function and hyperparameters.',
+                diagram: { type: 'svm' }
+            },
+            'knn': {
+                name: 'K-Nearest Neighbors (KNN)',
+                category: 'Supervised',
+                subCategory: 'Classification',
+                meta: 'Instance-based Learning',
+                principle: 'A non-parametric algorithm that classifies a new data point based on the majority class of its K nearest neighbors in the feature space.',
+                analogy: 'Judging a person by the company they keep. The new person will have the same label as the most common label among their closest friends.',
+                comparison: { performance: 5, scalability: 2, interpretability: 8 },
+                useWhen: 'You have a small to medium-sized dataset and want a simple, effective model. Excellent for recommendation systems.',
+                limitations: 'Very computationally expensive during prediction (must calculate distance to all training points) and sensitive to the scale of features.',
+                diagram: { type: 'knn' }
+            },
+            'decision-tree-classification': {
+                name: 'Decision Tree Classification',
+                category: 'Supervised',
+                subCategory: 'Classification',
+                meta: 'Hierarchical Classification',
+                principle: 'Builds a tree-like model of decisions, where each internal node represents a feature, each branch a decision rule, and each leaf node the outcome.',
+                analogy: 'A flowchart used to make a decision, where you follow a path of yes/no questions to reach a final answer.',
+                comparison: { performance: 6, scalability: 5, interpretability: 9 },
+                useWhen: 'You need a highly interpretable model for classification or regression and the data has clear decision boundaries.',
+                limitations: 'Prone to overfitting (especially on noisy data) and can be unstable, as small changes in data can lead to a completely different tree.',
+                diagram: { type: 'decision-tree' }
+            },
+            'random-forest-classification': {
+                name: 'Random Forest Classification',
+                category: 'Supervised',
+                subCategory: 'Classification',
+                meta: 'Ensemble Learning',
+                principle: 'An ensemble method that builds multiple decision trees on different subsets of the data and takes the majority vote (for classification) or average (for regression) of their predictions.',
+                analogy: 'A team of diverse experts voting on a decision. The collective wisdom of the group is more accurate than any single expert.',
+                comparison: { performance: 8, scalability: 6, interpretability: 5 },
+                useWhen: 'You need a powerful, robust, and accurate model that is less prone to overfitting than a single decision tree.',
+                limitations: 'Less interpretable than a single decision tree, and can be computationally expensive to train.',
+                diagram: { type: 'random-forest' }
+            },
+            'naive-bayes': {
+                name: 'Naive Bayes',
+                category: 'Supervised',
+                subCategory: 'Classification',
+                meta: 'Probabilistic Classification',
+                principle: 'A probabilistic classifier based on Bayes\' theorem, assuming strong (naive) independence between features.',
+                analogy: 'A spam filter that decides if an email is spam based on the probability of words like "free" or "viagra" appearing, assuming each word is independent of the others.',
+                comparison: { performance: 5, scalability: 8, interpretability: 9 },
+                useWhen: 'You need a fast, simple, and scalable classification model, especially for large datasets with text data.',
+                limitations: 'The strong assumption of independence between features is often violated in real-world data, which can hurt performance.',
+                diagram: { type: 'naive-bayes' }
+            },
+            'neural-networks': {
+                name: 'Neural Networks',
+                category: 'Supervised',
+                subCategory: 'Classification',
+                meta: 'Deep Learning',
+                principle: 'A computational model inspired by the human brain, composed of interconnected nodes (neurons) that process and transmit information to learn complex patterns from data.',
+                analogy: 'An assembly line where each station (layer) processes a piece of information and passes it on. By the end of the line, a complex decision or prediction is made.',
+                comparison: { performance: 10, scalability: 9, interpretability: 1 },
+                useWhen: 'You have a large, complex dataset (e.g., images, audio, text) and need to learn highly intricate non-linear relationships.',
+                limitations: 'Requires vast amounts of data and computational power, and the learned model is a "black box" that is difficult to interpret.',
+                diagram: { type: 'neural-networks' }
+            },
+            // --- Unsupervised Learning Algorithms ---
+            'k-means': {
+                name: 'K-Means Clustering',
+                category: 'Unsupervised',
+                subCategory: 'Clustering',
+                meta: 'Partition-based Clustering',
+                principle: 'Partitions a dataset into K distinct, non-overlapping clusters. It iteratively assigns data points to the nearest cluster centroid and then re-calculates the centroid.',
+                analogy: 'Sorting toys into K boxes. You place each toy into the box it\'s closest to, then move the boxes to be in the center of the toys they contain, and repeat.',
+                comparison: { performance: 6, scalability: 8, interpretability: 7 },
+                useWhen: 'You need to group a large dataset into a pre-determined number (K) of clusters and the clusters are expected to be spherical.',
+                limitations: 'Requires you to pre-define the number of clusters (K), struggles with non-spherical clusters, and sensitive to initial centroid placement.',
+                diagram: { type: 'k-means' }
+            },
+            'hierarchical-clustering': {
+                name: 'Hierarchical Clustering',
+                category: 'Unsupervised',
+                subCategory: 'Clustering',
+                meta: 'Nested Clustering',
+                principle: 'Builds a hierarchy of clusters. Agglomerative (bottom-up) starts with each data point as a cluster and merges the closest pairs. Divisive (top-down) starts with one cluster and splits it recursively.',
+                analogy: 'Creating a family tree. You start with individuals and connect them into branches (families) based on their relationships.',
+                comparison: { performance: 4, scalability: 3, interpretability: 8 },
+                useWhen: 'You don\'t know the number of clusters beforehand and want to visualize the nested structure of the data with a dendrogram.',
+                limitations: 'Can be computationally expensive for large datasets and is sensitive to noise and outliers.',
+                diagram: { type: 'hierarchical-clustering' }
+            },
+            'dbscan': {
+                name: 'DBSCAN',
+                category: 'Unsupervised',
+                subCategory: 'Clustering',
+                meta: 'Density-Based Clustering',
+                principle: 'Groups together data points that are closely packed together (high-density regions), marking as outliers points that lie alone in low-density regions.',
+                analogy: 'Finding crowded neighborhoods in a city map. The algorithm identifies areas with many people as clusters and ignores lone houses as noise.',
+                comparison: { performance: 6, scalability: 5, interpretability: 7 },
+                useWhen: 'The clusters are of arbitrary shapes and you need to identify noise/outliers in the data.',
+                limitations: 'Struggles with clusters of varying densities and is sensitive to the choice of distance parameters.',
+                diagram: { type: 'dbscan' }
+            },
+            'gmm': {
+                name: 'Gaussian Mixture Models (GMM)',
+                category: 'Unsupervised',
+                subCategory: 'Clustering',
+                meta: 'Probabilistic Clustering',
+                principle: 'Assumes that data points are generated from a mixture of several Gaussian distributions with unknown parameters, which are estimated using an iterative approach.',
+                analogy: 'A biologist who believes a population is composed of several subspecies. They try to find the characteristics (mean, variance) of each subspecies to classify new members.',
+                comparison: { performance: 5, scalability: 4, interpretability: 6 },
+                useWhen: 'You need to perform soft clustering, where each data point can belong to multiple clusters with a certain probability, and the clusters are not necessarily spherical.',
+                limitations: 'Sensitive to initial conditions and can converge to a local optimum. Assumes a Gaussian distribution for the clusters.',
+                diagram: { type: 'gmm' }
+            },
+            'pca': {
+                name: 'Principal Component Analysis (PCA)',
+                category: 'Unsupervised',
+                subCategory: 'Dimensionality Reduction',
+                meta: 'Linear Dimensionality Reduction',
+                principle: 'Reduces the dimensionality of a dataset by finding a new set of orthogonal axes (principal components) that capture the maximum variance in the data.',
+                analogy: 'Summarizing a long, detailed document into a few key bullet points, ensuring you keep the most important information while removing redundancy.',
+                comparison: { performance: 7, scalability: 7, interpretability: 9 },
+                useWhen: 'You have a dataset with many features and need to reduce its dimensionality while retaining as much information as possible.',
+                limitations: 'Information loss is inevitable, and the new principal components may not be easily interpretable in the original feature space.',
+                diagram: { type: 'pca' }
+            },
+            'ica': {
+                name: 'Independent Component Analysis (ICA)',
+                category: 'Unsupervised',
+                subCategory: 'Dimensionality Reduction',
+                meta: 'Source Separation',
+                principle: 'Separates a multivariate signal into additive subcomponents that are statistically independent of each other, unlike PCA which only ensures they are uncorrelated.',
+                analogy: 'The "cocktail party problem" - separating individual voices from a mixture of conversations recorded by multiple microphones.',
+                comparison: { performance: 6, scalability: 6, interpretability: 5 },
+                useWhen: 'You need to separate a mixed signal into its original, independent sources, such as in audio processing or medical signal analysis.',
+                limitations: 'Assumes the sources are non-Gaussian and independent. The order and scale of the independent components are not deterministic.',
+                diagram: { type: 'ica' }
+            },
+            'svd': {
+                name: 'Singular Value Decomposition (SVD)',
+                category: 'Unsupervised',
+                subCategory: 'Dimensionality Reduction',
+                meta: 'Matrix Factorization',
+                principle: 'A matrix factorization technique that decomposes a matrix into three simpler matrices. It\'s widely used for dimensionality reduction and recommender systems.',
+                analogy: 'Breaking down a complex recipe into three simple components: ingredients, instructions, and tools. Each component simplifies the whole process.',
+                comparison: { performance: 7, scalability: 7, interpretability: 6 },
+                useWhen: 'You need to perform low-rank approximation of a matrix, which is useful for data compression, noise reduction, and collaborative filtering.',
+                limitations: 'Can be computationally intensive for very large matrices and may not be the best choice for non-linear relationships.',
+                diagram: { type: 'svd' }
+            },
+            'autoencoders': {
+                name: 'Autoencoders',
+                category: 'Unsupervised',
+                subCategory: 'Dimensionality Reduction',
+                meta: 'Neural Network-based Reduction',
+                principle: 'A type of neural network that learns a compressed representation (encoding) of the input data and then tries to reconstruct the original data from this encoding.',
+                analogy: 'Learning to write a summary of a book (encoding) and then writing the full book again from just the summary (decoding).',
+                comparison: { performance: 8, scalability: 5, interpretability: 2 },
+                useWhen: 'You need to reduce dimensionality for complex, non-linear data (like images) or for anomaly detection.',
+                limitations: 'Requires significant data and computational resources. The encoded representation is often not easily interpretable.',
+                diagram: { type: 'autoencoder' }
+            },
+            'apriori': {
+                name: 'Apriori Algorithm',
+                category: 'Unsupervised',
+                subCategory: 'Association Rule Mining',
+                meta: 'Frequent Itemset Mining',
+                principle: 'An algorithm for mining frequent itemsets in a transactional database by using a candidate generation and test approach.',
+                analogy: 'A store manager looking at sales data to find which products are frequently bought together, like "if a customer buys bread, they also buy milk".',
+                comparison: { performance: 3, scalability: 3, interpretability: 9 },
+                useWhen: 'You need to discover association rules in a large dataset, for example, for market basket analysis.',
+                limitations: 'Can be very slow and memory-intensive for large datasets due to the generation of candidate itemsets.',
+                diagram: { type: 'apriori' }
+            },
+            'eclat': {
+                name: 'Eclat Algorithm',
+                category: 'Unsupervised',
+                subCategory: 'Association Rule Mining',
+                meta: 'Frequent Itemset Mining',
+                principle: 'An alternative to Apriori that uses a depth-first search approach on a transaction database to find frequent itemsets more efficiently.',
+                analogy: 'A more optimized version of the store manager\'s task, but this time they are more systematic and don\'t waste time on unlikely combinations.',
+                comparison: { performance: 5, scalability: 5, interpretability: 9 },
+                useWhen: 'You need a more efficient way to discover frequent itemsets compared to Apriori, especially for dense datasets.',
+                limitations: 'Can still be memory-intensive for very large datasets and may struggle with sparse data.',
+                diagram: { type: 'eclat' }
+            },
+            'fp-growth': {
+                name: 'FP-Growth Algorithm',
+                category: 'Unsupervised',
+                subCategory: 'Association Rule Mining',
+                meta: 'Frequent Itemset Mining',
+                principle: 'Mines frequent itemsets without candidate generation. It builds a Frequent Pattern Tree (FP-tree) to store the transaction data in a compressed format.',
+                analogy: 'A librarian organizing books on a shelf by their common topics, making it much faster to find books with similar subjects later.',
+                comparison: { performance: 6, scalability: 6, interpretability: 8 },
+                useWhen: 'You need an efficient and scalable method for frequent itemset mining, especially on very large datasets.',
+                limitations: 'The FP-tree can be complex and memory-intensive for large numbers of unique items.',
+                diagram: { type: 'fp-growth' }
+            },
+            'isolation-forest': {
+                name: 'Isolation Forest',
+                category: 'Unsupervised',
+                subCategory: 'Anomaly Detection',
+                meta: 'Ensemble-based Anomaly Detection',
+                principle: 'Detects anomalies by randomly partitioning data and observing how many splits it takes to isolate a point. Anomalies are isolated in fewer steps than normal points.',
+                analogy: 'Finding the weirdest item in a box by randomly picking things and asking, "Is this it?". The weird item is found much faster.',
+                comparison: { performance: 8, scalability: 9, interpretability: 7 },
+                useWhen: 'You need a fast and scalable algorithm for anomaly detection on high-dimensional data. It is particularly effective for large datasets.',
+                limitations: 'May struggle with data that has complex, non-linear relationships and can be sensitive to the presence of irrelevant features.',
+                diagram: { type: 'isolation-forest' }
+            },
+            'one-class-svm': {
+                name: 'One-Class SVM',
+                category: 'Unsupervised',
+                subCategory: 'Anomaly Detection',
+                meta: 'Boundary-based Anomaly Detection',
+                principle: 'A variation of SVM that learns a decision boundary that encapsulates the "normal" data points. Any new data point that falls outside this boundary is considered an anomaly.',
+                analogy: 'Drawing a fence around a perfectly normal house. Anything found outside the fence is considered suspicious or an intruder.',
+                comparison: { performance: 7, scalability: 4, interpretability: 6 },
+                useWhen: 'You have a dataset with only "normal" data and need to build a model to detect new, unknown anomalies.',
+                limitations: 'Can be slow to train on large datasets and is sensitive to the choice of kernel and hyperparameters.',
+                diagram: { type: 'one-class-svm' }
+            },
+            // --- Reinforcement Learning Algorithms ---
+            'q-learning': {
+                name: 'Q-Learning',
+                category: 'Reinforcement',
+                subCategory: 'Value-Based Methods',
+                meta: 'Model-free, Off-policy',
+                principle: 'An agent learns the value of taking a certain action in a particular state by updating a "Q-table" based on the rewards it receives. It\'s a model-free approach.',
+                analogy: 'Learning a game by trial and error. You try different moves, and when you get a good reward (e.g., score points), you update your strategy to favor that move.',
+                comparison: { performance: 5, scalability: 3, interpretability: 9 },
+                useWhen: 'The state and action space are small, and you need a simple agent to learn an optimal policy without a model of the environment.',
+                limitations: 'Cannot scale to environments with a large or continuous state/action space due to the need for a Q-table.',
+                diagram: { type: 'q-learning' }
+            },
+            'sarsa': {
+                name: 'SARSA',
+                category: 'Reinforcement',
+                subCategory: 'Value-Based Methods',
+                meta: 'Model-free, On-policy',
+                principle: 'Similar to Q-learning, but the update rule is based on the action actually taken by the agent, making it an "on-policy" method.',
+                analogy: 'Learning to drive by following a specific set of rules. You update your understanding of a good turn based on the turn you *actually* made, not the best possible one.',
+                comparison: { performance: 5, scalability: 3, interpretability: 9 },
+                useWhen: 'You need an agent to learn a safer, more conservative policy and the cost of exploring non-optimal actions is high.',
+                limitations: 'Like Q-learning, it doesn\'t scale to large state spaces and can be slow to converge.',
+                diagram: { type: 'sarsa' }
+            },
+            'dqn': {
+                name: 'Deep Q-Network (DQN)',
+                category: 'Reinforcement',
+                subCategory: 'Value-Based Methods',
+                meta: 'Deep Learning',
+                principle: 'Combines Q-learning with deep neural networks to approximate the Q-function. This allows it to handle complex, high-dimensional state spaces like images from a video game.',
+                analogy: 'Instead of using a simple table, the agent uses a brain (neural network) to estimate the value of different actions, enabling it to play complex video games.',
+                comparison: { performance: 8, scalability: 7, interpretability: 2 },
+                useWhen: 'You have a high-dimensional state space and need an agent to learn a robust policy, such as playing Atari games.',
+                limitations: 'Requires large amounts of data and computational power. Can be unstable and difficult to train effectively.',
+                diagram: { type: 'dqn' }
+            },
+            'policy-gradient': {
+                name: 'Policy Gradient',
+                category: 'Reinforcement',
+                subCategory: 'Policy-Based Methods',
+                meta: 'Directly learning a policy',
+                principle: 'Instead of learning a value function, this family of algorithms directly learns a policy that maps states to actions, aiming to maximize the expected reward.',
+                analogy: 'A robot learning to walk by making slight adjustments to its movement (policy) and then reinforcing the changes that lead to a better outcome.',
+                comparison: { performance: 6, scalability: 6, interpretability: 5 },
+                useWhen: 'The action space is continuous (e.g., controlling a robot arm) and you need a direct way to find the best policy.',
+                limitations: 'Can be difficult to train due to high variance in gradients, leading to slow convergence.',
+                diagram: { type: 'policy-gradient' }
+            },
+            'actor-critic': {
+                name: 'Actor-Critic',
+                category: 'Reinforcement',
+                subCategory: 'Policy-Based Methods',
+                meta: 'Combining Actor and Critic',
+                principle: 'Combines a "critic" that learns a value function to evaluate actions (like Q-learning) and an "actor" that learns a policy to select actions (like Policy Gradient).',
+                analogy: 'An actor on stage makes a move, and a critic in the audience gives feedback. The actor uses this feedback to improve their performance for the next scene.',
+                comparison: { performance: 8, scalability: 8, interpretability: 4 },
+                useWhen: 'You want to combine the stability of value-based methods with the efficiency of policy-based methods for complex tasks.',
+                limitations: 'More complex to implement and tune than a simple policy gradient method, and can be sensitive to hyperparameters.',
+                diagram: { type: 'actor-critic' }
+            },
+            'ppo': {
+                name: 'PPO',
+                category: 'Reinforcement',
+                subCategory: 'Policy-Based Methods',
+                meta: 'Stable Policy Updates',
+                principle: 'A policy gradient algorithm that uses a "trust region" to prevent the policy from changing too drastically at each step, leading to more stable and reliable training.',
+                analogy: 'A manager giving an employee feedback. The feedback is constructive and small, preventing the employee from making a drastic mistake that could be disastrous.',
+                comparison: { performance: 9, scalability: 8, interpretability: 4 },
+                useWhen: 'You need a high-performance, stable, and easy-to-implement policy-based algorithm for a wide range of tasks.',
+                limitations: 'Can still be sensitive to hyperparameters, but generally more robust than other policy gradient methods.',
+                diagram: { type: 'ppo' }
+            },
+            'dynamic-programming': {
+                name: 'Dynamic Programming',
+                category: 'Reinforcement',
+                subCategory: 'Model-Based Methods',
+                meta: 'Planning with a Model',
+                principle: 'A set of algorithms (e.g., Value Iteration) that compute an optimal policy by exhaustively planning with a complete model of the environment.',
+                analogy: 'A chess grandmaster who knows the rules and the value of every piece perfectly. They can calculate the best move by looking ahead at every possible sequence of moves.',
+                comparison: { performance: 10, scalability: 1, interpretability: 9 },
+                useWhen: 'You have a small, known environment and need to find the absolute optimal policy.',
+                limitations: 'Cannot be used in environments where the model is unknown or too complex, and does not scale to large state spaces.',
+                diagram: { type: 'dynamic-programming' }
+            },
+            'monte-carlo': {
+                name: 'Monte Carlo Methods',
+                category: 'Reinforcement',
+                subCategory: 'Model-Based Methods',
+                meta: 'Learning from Complete Episodes',
+                principle: 'Learn from complete episodes by averaging the returns (total rewards) received. It does not require a model of the environment and can be used with a large number of states.',
+                analogy: 'Learning to play a sport by playing many full games. You decide if a strategy is good by whether you win the whole game, not just a single move.',
+                comparison: { performance: 6, scalability: 5, interpretability: 7 },
+                useWhen: 'You can simulate complete episodes and need a model-free way to learn from experience.',
+                limitations: 'Can be slow to converge because it only updates after a full episode has been completed.',
+                diagram: { type: 'monte-carlo' }
+            },
+            'td-learning': {
+                name: 'Temporal Difference (TD) Learning',
+                category: 'Reinforcement',
+                subCategory: 'Model-Based Methods',
+                meta: 'Combining Monte Carlo and DP',
+                principle: 'Combines the best of Monte Carlo and Dynamic Programming. It learns from incomplete episodes and updates its value estimates based on other learned value estimates.',
+                analogy: 'A coach giving feedback mid-game. You don\'t have to wait until the end to learn; you can adjust your strategy based on the outcome of a single play.',
+                comparison: { performance: 7, scalability: 6, interpretability: 8 },
+                useWhen: 'You need a model-free learning method that can learn from incomplete episodes, which is more efficient than waiting for the end of a game.',
+                limitations: 'Can be sensitive to hyperparameters and may not always converge to an optimal policy in some cases.',
+                diagram: { type: 'td-learning' }
+            }
+        };
+
+        const categories = {
+            'Supervised': { models: ['linear-regression', 'polynomial-regression', 'svr', 'decision-tree-regression', 'random-forest-regression', 'gradient-boosting-regression', 'logistic-regression', 'svm', 'knn', 'decision-tree-classification', 'random-forest-classification', 'naive-bayes', 'neural-networks'], color: 'bg-green-500' },
+            'Unsupervised': { models: ['k-means', 'hierarchical-clustering', 'dbscan', 'gmm', 'pca', 'ica', 'svd', 'autoencoders', 'apriori', 'eclat', 'fp-growth', 'isolation-forest', 'one-class-svm'], color: 'bg-purple-500' },
+            'Reinforcement': { models: ['q-learning', 'sarsa', 'dqn', 'policy-gradient', 'actor-critic', 'ppo', 'dynamic-programming', 'monte-carlo', 'td-learning'], color: 'bg-red-500' }
+        };
+
+        const categoryDetails = {
+            'Supervised': {
+                description: 'Supervised learning is a type of machine learning where the model is trained on a labeled dataset, meaning each training example has an input and a corresponding correct output. The goal is to learn a mapping function from the input to the output so that the model can make accurate predictions on unseen data.',
+                differences: [
+                    'Requires labeled training data (input-output pairs).',
+                    'Tasks typically involve prediction (e.g., regression for continuous values, classification for discrete labels).',
+                    'Learning is guided by feedback in the form of correct answers.',
+                    'Common algorithms: Linear Regression, Logistic Regression, Support Vector Machines, Decision Trees, Neural Networks.'
+                ]
+            },
+            'Unsupervised': {
+                description: 'Unsupervised learning deals with unlabeled data, where the model tries to find hidden patterns, structures, or relationships within the input data without any explicit guidance. It’s often used for exploratory data analysis, dimensionality reduction, and anomaly detection.',
+                differences: [
+                    'Works with unlabeled training data.',
+                    'Tasks involve finding structure or patterns (e.g., clustering, dimensionality reduction, association rule mining).',
+                    'No explicit feedback or correct answers provided during training.',
+                    'Common algorithms: K-Means, Hierarchical Clustering, PCA, Autoencoders, Apriori.'
+                ]
+            },
+            'Reinforcement': {
+                description: 'Reinforcement learning is an area of machine learning concerned with how intelligent agents ought to take actions in an environment to maximize the notion of cumulative reward. It involves an agent interacting with an environment, performing actions, and receiving rewards or penalties based on those actions.',
+                differences: [
+                    'Learns through interaction with an environment.',
+                    'No fixed dataset; data is generated through trial and error.',
+                    'Goal is to maximize cumulative reward over time.',
+                    'Involves an agent, environment, actions, states, and rewards.',
+                    'Common algorithms: Q-Learning, SARSA, Policy Gradient, Actor-Critic, PPO.'
+                ]
+            }
+        };
+
+        const supervisedSubCategories = {
+            'Regression': ['linear-regression', 'polynomial-regression', 'svr', 'decision-tree-regression', 'random-forest-regression', 'gradient-boosting-regression'],
+            'Classification': ['logistic-regression', 'svm', 'knn', 'decision-tree-classification', 'random-forest-classification', 'naive-bayes', 'neural-networks']
+        };
+        const unsupervisedSubCategories = {
+            'Clustering': ['k-means', 'hierarchical-clustering', 'dbscan', 'gmm'],
+            'Dimensionality Reduction': ['pca', 'ica', 'svd', 'autoencoders'],
+            'Association Rule Mining': ['apriori', 'eclat', 'fp-growth'],
+            'Anomaly Detection': ['isolation-forest', 'one-class-svm']
+        };
+        const reinforcementSubCategories = {
+            'Value-Based Methods': ['q-learning', 'sarsa', 'dqn'],
+            'Policy-Based Methods': ['policy-gradient', 'actor-critic', 'ppo'],
+            'Model-Based Methods': ['dynamic-programming', 'monte-carlo', 'td-learning']
+        };
+
+        let comparisonChart;
+        let currentState = {
+            selectedAlgoId: null, // Initially no algorithm selected
+            activeCategory: 'All'
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initNav();
+            // Initially show all algorithms
+            showAlgorithmsForCategory('All');
+            setupEventListeners();
+        });
+
+        function initNav() {
+            const navContainer = document.getElementById('main-nav');
+            let buttonsHTML = `<button data-category="All" class="nav-button px-4 py-2 rounded-full text-sm font-medium bg-white shadow-sm hover:bg-gray-100 active">All Algorithms</button>`;
+            for (const category in categories) {
+                buttonsHTML += `<button data-category="${category}" class="nav-button px-4 py-2 rounded-full text-sm font-medium bg-white shadow-sm hover:bg-gray-100">${category}</button>`;
+            }
+            navContainer.innerHTML = buttonsHTML;
+        }
+
+        function buildCardsHTML(category) {
+            let cardsHTML = '';
+            let algorithmsToDisplay = [];
+            let subCategoriesToDisplay;
+
+            switch (category) {
+                case 'Supervised':
+                    subCategoriesToDisplay = supervisedSubCategories;
+                    break;
+                case 'Unsupervised':
+                    subCategoriesToDisplay = unsupervisedSubCategories;
+                    break;
+                case 'Reinforcement':
+                    subCategoriesToDisplay = reinforcementSubCategories;
+                    break;
+                case 'All':
+                default:
+                    algorithmsToDisplay = Object.keys(algorithmData);
+                    break;
+            }
+
+            if (subCategoriesToDisplay) {
+                for (const subCat in subCategoriesToDisplay) {
+                    cardsHTML += `<h3 class="text-xl font-bold mt-6 mb-4 text-slate-700">${subCat}</h3>`;
+                    cardsHTML += `<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">`;
+                    subCategoriesToDisplay[subCat].forEach(id => {
+                        const algo = algorithmData[id];
+                        cardsHTML += `
+                            <div id="algo-card-${id}" data-id="${id}" data-category="${category}" class="algo-card flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow border-2 border-transparent hover:border-gray-300">
+                                <span class="text-3xl font-bold mb-1">${getIcon(id)}</span>
+                                <span class="text-sm font-semibold text-center">${algo.name}</span>
+                                <span class="text-xs text-slate-500">${subCat}</span>
+                            </div>
+                        `;
+                    });
+                    cardsHTML += `</div>`;
+                }
+            } else { // All Algorithms
+                cardsHTML += `<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">`;
+                algorithmsToDisplay.forEach(id => {
+                    const algo = algorithmData[id];
+                    cardsHTML += `
+                        <div id="algo-card-${id}" data-id="${id}" data-category="${category}" class="algo-card flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow border-2 border-transparent hover:border-gray-300">
+                            <span class="text-3xl font-bold mb-1">${getIcon(id)}</span>
+                            <span class="text-sm font-semibold text-center">${algo.name}</span>
+                            <span class="text-xs text-slate-500">${algo.category}</span>
+                        </div>
+                    `;
+                });
+                cardsHTML += `</div>`;
+            }
+            return cardsHTML;
+        }
+
+        function getIcon(id) {
+            switch (id) {
+                case 'linear-regression': return '&#128200;'; // Chart with upwards trend
+                case 'polynomial-regression': return '&#128200;'; // Chart with upwards trend
+                case 'svr': return '&#128187;'; // Laptop
+                case 'decision-tree-regression': return '&#127795;'; // Tree
+                case 'random-forest-regression': return '&#127798;'; // Forest
+                case 'gradient-boosting-regression': return '&#128640;'; // Rocket
+                case 'logistic-regression': return '&#128202;'; // Chart with downwards trend
+                case 'svm': return '&#128187;'; // Laptop
+                case 'knn': return '&#129532;'; // Molecule
+                case 'decision-tree-classification': return '&#127795;'; // Tree
+                case 'random-forest-classification': return '&#127798;'; // Forest
+                case 'naive-bayes': return '&#128274;'; // Lock
+                case 'neural-networks': return '&#129504;'; // Brain
+                case 'k-means': return '&#128140;'; // Bouquet
+                case 'hierarchical-clustering': return '&#127794;'; // Tree
+                case 'dbscan': return '&#128373;'; // Spiderweb
+                case 'gmm': return '&#128296;'; // Gear
+                case 'pca': return '&#128269;'; // Magnifying glass
+                case 'ica': return '&#127911;'; // Microphone
+                case 'svd': return '&#128203;'; // Document
+                case 'autoencoders': return '&#129505;'; // Robot
+                case 'apriori': return '&#128722;'; // Shopping cart
+                case 'eclat': return '&#128270;'; // Magnifying glass
+                case 'fp-growth': return '&#128240;'; // Book
+                case 'isolation-forest': return '&#128372;'; // Alien monster
+                case 'one-class-svm': return '&#128737;'; // Fence
+                case 'q-learning': return '&#127918;'; // Video game controller
+                case 'sarsa': return '&#127918;'; // Video game controller
+                case 'dqn': return '&#129504;'; // Brain
+                case 'policy-gradient': return '&#128640;'; // Rocket
+                case 'actor-critic': return '&#128124;'; // Person talking
+                case 'ppo': return '&#128270;'; // Magnifying glass
+                case 'dynamic-programming': return '&#128196;'; // Document with graph
+                case 'monte-carlo': return '&#127922;'; // Game dice
+                case 'td-learning': return '&#128339;'; // Clock
+                default: return '&#129504;'; // Brain
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('algorithm-cards').addEventListener('click', (e) => {
+                const card = e.target.closest('.algo-card');
+                if (card && card.dataset.id) {
+                    updateContent(card.dataset.id);
+                }
+            });
+
+            document.getElementById('main-nav').addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const category = e.target.dataset.category;
+                    currentState.activeCategory = category;
+
+                    document.querySelectorAll('#main-nav button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    if (category === 'All') {
+                        showAlgorithmsForCategory('All');
+                    } else {
+                        showCategoryDetails(category);
+                    }
+                }
+            });
+
+            document.getElementById('show-algorithms-btn').addEventListener('click', () => {
+                showAlgorithmsForCategory(currentState.activeCategory);
+            });
+        }
+
+        function showCategoryDetails(categoryName) {
+            const categorySection = document.getElementById('category-details-section');
+            const algoCardsSection = document.getElementById('algorithm-cards');
+            const contentArea = document.getElementById('content-area');
+
+            // Hide algorithm cards and algorithm details
+            algoCardsSection.style.display = 'none';
+            contentArea.style.display = 'none';
+
+            // Show category details section
+            categorySection.style.display = 'block';
+            document.getElementById('category-name').textContent = categoryName + ' Learning';
+            document.getElementById('category-description').textContent = categoryDetails[categoryName].description;
+
+            const differencesList = document.getElementById('category-differences');
+            differencesList.innerHTML = categoryDetails[categoryName].differences.map(diff => `<li>${diff}</li>`).join('');
+
+            // Hide 'Explore Algorithms' button if already displaying all algorithms for that category
+            const showAlgorithmsBtn = document.getElementById('show-algorithms-btn');
+            if (currentState.activeCategory === categoryName && algoCardsSection.style.display === 'block') {
+                showAlgorithmsBtn.style.display = 'none';
+            } else {
+                showAlgorithmsBtn.style.display = 'block';
+            }
+        }
+
+        function showAlgorithmsForCategory(categoryName) {
+            const categorySection = document.getElementById('category-details-section');
+            const algoCardsSection = document.getElementById('algorithm-cards');
+            const contentArea = document.getElementById('content-area');
+
+            // Hide category details
+            categorySection.style.display = 'none';
+
+            // Show algorithm cards and algorithm details
+            algoCardsSection.style.display = 'block';
+            contentArea.style.display = 'grid'; // Ensure it's grid as defined in HTML
+
+            algoCardsSection.innerHTML = buildCardsHTML(categoryName);
+
+            // Select the first algorithm of the category
+            const firstCardElement = document.getElementById('algorithm-cards').querySelector('.algo-card');
+            if (firstCardElement) {
+                updateContent(firstCardElement.dataset.id);
+            } else {
+                // If no algorithms in category (shouldn't happen with current data, but for robustness)
+                document.getElementById('algo-name').textContent = 'No Algorithms Available';
+                document.getElementById('algo-meta').textContent = '';
+                document.getElementById('principle-text').textContent = '';
+                document.getElementById('analogy-text').textContent = '';
+                document.getElementById('tabs').innerHTML = '';
+                document.getElementById('tab-content').innerHTML = '';
+                document.getElementById('conceptual-diagram').innerHTML = '';
+                if (comparisonChart) comparisonChart.destroy();
+            }
+        }
+
+        function updateContent(algoId) {
+            currentState.selectedAlgoId = algoId;
+            const algo = algorithmData[algoId];
+            if (!algo) return;
+
+            // Hide category details section if an algorithm is selected
+            document.getElementById('category-details-section').style.display = 'none';
+            document.getElementById('algorithm-cards').style.display = 'block';
+            document.getElementById('content-area').style.display = 'grid';
+
+
+            document.querySelectorAll('.algo-card').forEach(p => p.classList.remove('active'));
+            const selectedCard = document.getElementById(`algo-card-${algoId}`);
+            if (selectedCard) {
+                selectedCard.classList.add('active');
+            }
+
+            const contentArea = document.querySelector('.lg\\:col-span-3');
+            contentArea.classList.remove('content-fade-in');
+            void contentArea.offsetWidth; // Trigger reflow to restart animation
+            contentArea.classList.add('content-fade-in');
+
+            document.getElementById('algo-name').textContent = algo.name;
+            document.getElementById('algo-meta').textContent = `${algo.category} > ${algo.subCategory} • ${algo.meta}`;
+            document.getElementById('principle-text').textContent = algo.principle;
+            document.getElementById('analogy-text').textContent = algo.analogy;
+
+            // Fix nav button highlighting: ONLY set active for the current nav selection
+            document.querySelectorAll('#main-nav button').forEach(btn => btn.classList.remove('active'));
+            const navBtn = document.querySelector(`#main-nav button[data-category="${currentState.activeCategory}"]`);
+            if (navBtn) {
+                navBtn.classList.add('active');
+            }
+
+            // Ensure cards are for the correct category
+            const cardsContainer = document.getElementById('algorithm-cards');
+            if (cardsContainer.innerHTML === '' || !cardsContainer.querySelector(`#algo-card-${algoId}`)) {
+                cardsContainer.innerHTML = buildCardsHTML(algo.category);
+            }
+            renderTabs(algoId);
+            renderConceptualDiagram(algo.diagram);
+            updateComparisonChart(algoId);
+        }
+
+        function renderTabs(algoId) {
+            const algo = algorithmData[algoId];
+            const tabsContainer = document.getElementById('tabs');
+            const tabContentContainer = document.getElementById('tab-content');
+
+            const tabKeys = ['useWhen', 'limitations'];
+            const tabNames = ['When to Use', 'Limitations'];
+
+            tabsContainer.innerHTML = tabKeys.map((key, index) =>
+                `<button data-tab="${key}" class="tab-button py-2 border-b-2 ${index === 0 ? 'active border-blue-500' : 'border-transparent text-slate-500 hover:border-gray-300'}">${tabNames[index]}</button>`
+            ).join('');
+
+            // Set initial tab content
+            tabContentContainer.innerHTML = `<p class="text-slate-600 leading-relaxed">${algo.useWhen}</p>`;
+
+            tabsContainer.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tabKey = e.target.dataset.tab;
+                    tabsContainer.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    tabContentContainer.innerHTML = `<p class="text-slate-600 leading-relaxed">${algo[tabKey]}</p>`;
+                });
+            });
+        }
+
+        function renderConceptualDiagram(diagram) {
+            const container = document.getElementById('conceptual-diagram');
+            let html = '';
+            const arrow = `<div class="mx-2 text-slate-400 font-sans">&rarr;</div>`;
+
+            switch (diagram.type) {
+                case 'simple':
+                    html = `<div class="flex items-center justify-center flex-wrap">${diagram.steps.map(s => `<div class="m-1 px-3 py-1.5 bg-slate-200 text-slate-700 rounded-md text-sm font-medium">${s}</div>`).join(arrow)}</div>`;
+                    break;
+                case 'decision-tree':
+                    html = `
+                        <div class="text-center">
+                            <div class="m-1 px-3 py-1.5 bg-green-200 text-green-800 rounded-md text-sm font-medium">Root Node (Feature A)</div>
+                            <div class="flex justify-center my-1">
+                                <span class="block w-px h-4 bg-gray-400"></span>
+                                <span class="block w-px h-4 bg-gray-400 transform -rotate-45 translate-x-2"></span>
+                                <span class="block w-px h-4 bg-gray-400 transform rotate-45 -translate-x-2"></span>
+                            </div>
+                            <div class="flex justify-around">
+                                <div class="text-center">
+                                    <div class="m-1 px-3 py-1.5 bg-blue-200 text-blue-800 rounded-md text-sm font-medium">Node B</div>
+                                    <div class="flex justify-center my-1">
+                                        <span class="block w-px h-4 bg-gray-400"></span>
+                                        <span class="block w-px h-4 bg-gray-400 transform -rotate-45 translate-x-2"></span>
+                                    </div>
+                                    <div class="flex justify-center">
+                                        <div class="m-1 px-3 py-1.5 bg-purple-200 text-purple-800 rounded-md text-sm font-medium">Leaf 1</div>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="m-1 px-3 py-1.5 bg-blue-200 text-blue-800 rounded-md text-sm font-medium">Node C</div>
+                                    <div class="flex justify-center my-1">
+                                        <span class="block w-px h-4 bg-gray-400"></span>
+                                        <span class="block w-px h-4 bg-gray-400 transform rotate-45 -translate-x-2"></span>
+                                    </div>
+                                    <div class="flex justify-center">
+                                        <div class="m-1 px-3 py-1.5 bg-purple-200 text-purple-800 rounded-md text-sm font-medium">Leaf 2</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'random-forest':
+                    html = `
+                        <div class="flex flex-wrap justify-center items-start gap-4">
+                            <div class="text-center border p-2 rounded-md bg-gray-50">
+                                <div class="m-1 px-2 py-1 bg-green-200 text-green-800 rounded-md text-xs font-medium">Tree 1</div>
+                                <div class="m-1 px-2 py-1 bg-blue-200 text-blue-800 rounded-md text-xs font-medium">...</div>
+                                <div class="m-1 px-2 py-1 bg-purple-200 text-purple-800 rounded-md text-xs font-medium">Leaf A</div>
+                            </div>
+                            <div class="text-center border p-2 rounded-md bg-gray-50">
+                                <div class="m-1 px-2 py-1 bg-green-200 text-green-800 rounded-md text-xs font-medium">Tree 2</div>
+                                <div class="m-1 px-2 py-1 bg-blue-200 text-blue-800 rounded-md text-xs font-medium">...</div>
+                                <div class="m-1 px-2 py-1 bg-purple-200 text-purple-800 rounded-md text-xs font-medium">Leaf B</div>
+                            </div>
+                            <div class="text-center border p-2 rounded-md bg-gray-50">
+                                <div class="m-1 px-2 py-1 bg-green-200 text-green-800 rounded-md text-xs font-medium">Tree 3</div>
+                                <div class="m-1 px-2 py-1 bg-blue-200 text-blue-800 rounded-md text-xs font-medium">...</div>
+                                <div class="m-1 px-2 py-1 bg-purple-200 text-purple-800 rounded-md text-xs font-medium">Leaf C</div>
+                            </div>
+                            <div class="flex items-center text-xl font-bold ml-2">=</div>
+                            <div class="m-1 px-3 py-1.5 bg-yellow-200 text-yellow-800 rounded-md font-medium">Final Prediction (Majority Vote/Average)</div>
+                        </div>
+                    `;
+                    break;
+                case 'gradient-boosting':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="flex items-center">
+                                <div class="m-1 px-3 py-1.5 bg-orange-200 text-orange-800 rounded-md text-sm font-medium">Model 1</div>
+                                ${arrow}
+                                <div class="m-1 px-3 py-1.5 bg-teal-200 text-teal-800 rounded-md text-sm font-medium">Corrects Errors 1</div>
+                                ${arrow}
+                                <div class="m-1 px-3 py-1.5 bg-orange-200 text-orange-800 rounded-md text-sm font-medium">Model 2</div>
+                                ${arrow}
+                                <div class="m-1 px-3 py-1.5 bg-teal-200 text-teal-800 rounded-md text-sm font-medium">Corrects Errors 2</div>
+                                ${arrow}
+                                <div class="m-1 px-3 py-1.5 bg-orange-200 text-orange-800 rounded-md text-sm font-medium">...</div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <div class="m-1 px-3 py-1.5 bg-yellow-200 text-yellow-800 rounded-md font-medium">Final Strong Predictor</div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'neural-networks':
+                    html = `
+                        <div class="flex items-center justify-center space-x-4">
+                            <div class="flex flex-col items-center">
+                                <div class="w-4 h-4 rounded-full bg-slate-400 mb-2"></div>
+                                <div class="w-4 h-4 rounded-full bg-slate-400 mb-2"></div>
+                                <div class="w-4 h-4 rounded-full bg-slate-400"></div>
+                                <div class="text-xs text-slate-500 mt-2">Input Layer</div>
+                            </div>
+                            ${arrow}
+                            <div class="flex flex-col items-center">
+                                <div class="w-4 h-4 rounded-full bg-blue-400 mb-2"></div>
+                                <div class="w-4 h-4 rounded-full bg-blue-400 mb-2"></div>
+                                <div class="w-4 h-4 rounded-full bg-blue-400"></div>
+                                <div class="text-xs text-slate-500 mt-2">Hidden Layer</div>
+                            </div>
+                            ${arrow}
+                            <div class="flex flex-col items-center">
+                                <div class="w-4 h-4 rounded-full bg-green-400 mb-2"></div>
+                                <div class="text-xs text-slate-500 mt-2">Output Layer</div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'k-means':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="flex space-x-4 mb-4">
+                                <div class="w-16 h-16 rounded-full bg-red-300 flex items-center justify-center text-2xl">C1</div>
+                                <div class="w-16 h-16 rounded-full bg-blue-300 flex items-center justify-center text-2xl">C2</div>
+                                <div class="w-16 h-16 rounded-full bg-green-300 flex items-center justify-center text-2xl">C3</div>
+                            </div>
+                            <p class="text-sm text-slate-600 mb-2">Data points assigned to closest centroid.</p>
+                            <p class="text-sm text-slate-600">Centroids recalculate position.</p>
+                        </div>
+                    `;
+                    break;
+                case 'pca':
+                    html = `
+                        <div class="flex items-center justify-center">
+                            <div class="flex flex-col items-center p-2 border rounded-md bg-gray-50">
+                                <span class="text-sm font-semibold mb-1">High-Dim Data</span>
+                                <div class="w-12 h-12 bg-gray-300 flex items-center justify-center">...</div>
+                            </div>
+                            ${arrow}
+                            <div class="flex flex-col items-center p-2 border rounded-md bg-gray-50">
+                                <span class="text-sm font-semibold mb-1">PCA Transform</span>
+                                <div class="w-12 h-12 bg-blue-300 flex items-center justify-center">PC</div>
+                            </div>
+                            ${arrow}
+                            <div class="flex flex-col items-center p-2 border rounded-md bg-gray-50">
+                                <span class="text-sm font-semibold mb-1">Reduced-Dim Data</span>
+                                <div class="w-12 h-12 bg-green-300 flex items-center justify-center">...</div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'apriori':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="flex items-center mb-2">
+                                <div class="m-1 px-3 py-1.5 bg-yellow-200 text-yellow-800 rounded-md text-sm font-medium">Itemset 1</div>
+                                ${arrow}
+                                <div class="m-1 px-3 py-1.5 bg-yellow-200 text-yellow-800 rounded-md text-sm font-medium">Itemset 2</div>
+                            </div>
+                            <p class="text-sm text-slate-600">Finds frequent combinations.</p>
+                        </div>
+                    `;
+                    break;
+                case 'q-learning':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="m-1 px-3 py-1.5 bg-blue-200 text-blue-800 rounded-md text-sm font-medium">State (S)</div>
+                            <div class="my-2 text-slate-400 font-sans">&#8595; Action (A)</div>
+                            <div class="m-1 px-3 py-1.5 bg-green-200 text-green-800 rounded-md text-sm font-medium">New State (S')</div>
+                            <div class="my-2 text-slate-400 font-sans">&#8595; Reward (R)</div>
+                            <div class="m-1 px-3 py-1.5 bg-purple-200 text-purple-800 rounded-md text-sm font-medium">Update Q-Table</div>
+                        </div>
+                    `;
+                    break;
+                case 'policy-gradient':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="m-1 px-3 py-1.5 bg-blue-200 text-blue-800 rounded-md text-sm font-medium">State</div>
+                            <div class="my-2 text-slate-400 font-sans">&#8595; Policy (Neural Net)</div>
+                            <div class="m-1 px-3 py-1.5 bg-green-200 text-green-800 rounded-md text-sm font-medium">Action</div>
+                            <div class="my-2 text-slate-400 font-sans">&#8595; Reward Signal</div>
+                            <div class="m-1 px-3 py-1.5 bg-purple-200 text-purple-800 rounded-md text-sm font-medium">Adjust Policy</div>
+                        </div>
+                    `;
+                    break;
+                case 'actor-critic':
+                    html = `
+                        <div class="flex items-center justify-center space-x-4">
+                            <div class="flex flex-col items-center border p-2 rounded-md bg-gray-50">
+                                <span class="font-semibold text-sm mb-1">Actor</span>
+                                <div class="w-12 h-12 rounded-full bg-red-300 flex items-center justify-center">Policy</div>
+                                <span class="text-xs text-slate-500 mt-1">Chooses Action</span>
+                            </div>
+                            ${arrow}
+                            <div class="flex flex-col items-center border p-2 rounded-md bg-gray-50">
+                                <span class="font-semibold text-sm mb-1">Critic</span>
+                                <div class="w-12 h-12 rounded-full bg-blue-300 flex items-center justify-center">Value</div>
+                                <span class="text-xs text-slate-500 mt-1">Evaluates Action</span>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'ppo':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="m-1 px-3 py-1.5 bg-yellow-200 text-yellow-800 rounded-md text-sm font-medium">Old Policy</div>
+                            <div class="my-1 text-slate-400 font-sans">&#8595;</div>
+                            <div class="m-1 px-3 py-1.5 bg-green-200 text-green-800 rounded-md text-sm font-medium">New Policy (Clipped)</div>
+                            <p class="text-xs text-slate-600 mt-2">Update policy in small, stable steps.</p>
+                        </div>
+                    `;
+                    break;
+                case 'dynamic-programming':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="m-1 px-3 py-1.5 bg-orange-200 text-orange-800 rounded-md text-sm font-medium">Known Model</div>
+                            <div class="my-2 text-slate-400 font-sans">&#8595;</div>
+                            <div class="m-1 px-3 py-1.5 bg-teal-200 text-teal-800 rounded-md text-sm font-medium">Iterative Calculation</div>
+                            <div class="my-2 text-slate-400 font-sans">&#8595;</div>
+                            <div class="m-1 px-3 py-1.5 bg-purple-200 text-purple-800 rounded-md text-sm font-medium">Optimal Policy/Value</div>
+                        </div>
+                    `;
+                    break;
+                case 'monte-carlo':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="m-1 px-3 py-1.5 bg-orange-200 text-orange-800 rounded-md text-sm font-medium">Episode 1</div>
+                            <div class="m-1 px-3 py-1.5 bg-blue-200 text-blue-800 rounded-md text-sm font-medium">Episode 2</div>
+                            <div class="m-1 px-3 py-1.5 bg-green-200 text-green-800 rounded-md text-sm font-medium">...</div>
+                            <div class="my-2 text-slate-400 font-sans">&#8595; Average Returns</div>
+                            <div class="m-1 px-3 py-1.5 bg-purple-200 text-purple-800 rounded-md text-sm font-medium">Learn Value/Policy</div>
+                        </div>
+                    `;
+                    break;
+                case 'td-learning':
+                    html = `
+                        <div class="flex flex-col items-center">
+                            <div class="m-1 px-3 py-1.5 bg-orange-200 text-orange-800 rounded-md text-sm font-medium">Current State (S)</div>
+                            <div class="my-1 text-slate-400 font-sans">&#8595; Action (A)</div>
+                            <div class="m-1 px-3 py-1.5 bg-blue-200 text-blue-800 rounded-md text-sm font-medium">Next State (S'), Reward (R)</div>
+                            <div class="my-1 text-slate-400 font-sans">&#8595;</div>
+                            <div class="m-1 px-3 py-1.5 bg-purple-200 text-purple-800 rounded-md text-sm font-medium">Update Value (based on S' value)</div>
+                        </div>
+                    `;
+                    break;
+
+                // Add more cases for other diagram types if necessary
+                default:
+                    html = `<p class="text-slate-500">Diagram not available for this algorithm.</p>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function updateComparisonChart(algoId) {
+            const algo = algorithmData[algoId];
+            if (!algo || !algo.comparison) {
+                document.getElementById('comparisonChart').style.display = 'none';
+                return;
+            } else {
+                document.getElementById('comparisonChart').style.display = 'block';
+            }
+
+            const data = {
+                labels: ['Performance', 'Scalability', 'Interpretability'],
+                datasets: [{
+                    label: algo.name,
+                    data: [algo.comparison.performance, algo.comparison.scalability, algo.comparison.interpretability],
+                    backgroundColor: 'rgba(59, 130, 246, 0.4)', // Blue-500 with transparency
+                    borderColor: '#3B82F6', // Blue-500
+                    borderWidth: 1
+                }]
+            };
+
+            const options = {
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: false
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 10,
+                        ticks: {
+                            display: false, // Hides the labels around the radar chart
+                            beginAtZero: true,
+                            max: 10,
+                            stepSize: 2,
+                            font: {
+                                size: 10
+                            },
+                            backdropColor: 'transparent', // Ensure no background for ticks
+                            callback: function (value, index, values) {
+                                return value === 0 ? '' : value; // Only show non-zero ticks
+                            }
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 12
+                            },
+                            color: '#334155'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.r !== null) {
+                                    label += context.parsed.r;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            };
+
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            if (comparisonChart) {
+                comparisonChart.destroy();
+            }
+            comparisonChart = new Chart(ctx, {
+                type: 'radar',
+                data: data,
+                options: options
+            });
+        }
+    </script>
+</body>
+
+</html>
